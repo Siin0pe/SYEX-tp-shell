@@ -1,0 +1,87 @@
+#!/bin/sh
+# usage    : cce file.c [args...]
+# fonction : compile file.c sans sa 1re ligne (le "#!cce"), puis lance
+#            l'exécutable obtenu avec args.
+#   statut 0 : le programme a renvoyé 0
+#   statut 1 : le programme a renvoyé un statut ≠ 0
+#   statut 2 : la compilation a échoué (ou mauvais usage)
+#   SILENCE non vide : les messages du compilateur sont masqués
+#   DEBUG non vide   : compile avec -g et lance dans gdb
+#
+# Avec "#!cce" en tête de hello.c, la commande "./hello.c 2 good" fait
+# lancer par le système : cce ./hello.c 2 good   (cours diapo 54)
+
+# Il faut au moins le fichier source
+if [ $# -lt 1 ] ; then
+    # Erreur sur stderr
+    echo "usage: $0 file.c [args...]" 1>&2
+    # Statut 2
+    exit 2
+fi
+
+# Nom significatif pour le source
+src="$1"
+# Retire le source : "$@" ne contient plus que les arguments du programme
+shift
+
+# Le source doit être lisible
+if [ ! -r "$src" ] ; then
+    # Erreur sur stderr
+    echo "$0: '$src' is not readable" 1>&2
+    # Statut 2
+    exit 2
+fi
+
+# Exécutable unique : /tmp/N.a.out avec N = PID de cce ($$)
+exe=/tmp/$$.a.out
+
+# Option de compilation : -g si DEBUG n'est pas vide (-n = chaîne non vide)
+opt=
+if [ -n "$DEBUG" ] ; then
+    # Informations de débogage pour gdb
+    opt=-g
+fi
+
+# Compilation. sed -e 1d écrit le source sans sa 1re ligne sur stdout,
+# gcc -x c - le lit sur stdin comme du C. Le statut du pipe est celui
+# de la dernière commande, donc celui de gcc.
+if [ -n "$SILENCE" ] ; then
+    # Mode silencieux : stderr de gcc (warnings, erreurs) vers la poubelle
+    sed -e 1d "$src" | gcc $opt -x c -o "$exe" - 2> /dev/null
+else
+    # Mode normal : on voit les messages du compilateur
+    sed -e 1d "$src" | gcc $opt -x c -o "$exe" -
+fi
+# $? = statut de la compilation, conservé dans une variable
+cst=$?
+
+# La compilation a échoué
+if [ $cst -ne 0 ] ; then
+    # Supprime un éventuel exécutable partiel
+    rm -f "$exe"
+    # Statut 2 : erreur de compilation
+    exit 2
+fi
+
+# Exécution
+if [ -n "$DEBUG" ] ; then
+    # Dans le débogueur : --args transmet les arguments au programme
+    gdb --args "$exe" "$@"
+else
+    # Directement, avec les arguments restants (un par élément de "$@")
+    "$exe" "$@"
+fi
+# Statut renvoyé par le programme
+st=$?
+
+# Supprime l'exécutable après son exécution
+rm -f "$exe"
+
+# Traduit le statut du programme en statut de cce
+if [ $st -eq 0 ] ; then
+    # Le programme a réussi
+    exit 0
+else
+    # Le programme a échoué
+    exit 1
+fi

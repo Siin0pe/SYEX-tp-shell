@@ -1,0 +1,42 @@
+#!/bin/sh
+# usage    : factdiv n m          (entiers avec n >= m >= 0)
+# fonction : écrit n!/m! sur stdout en utilisant util.sh (exercice 8.3)
+
+# Source util.sh rangé à côté du script
+. "$(dirname "$0")/util.sh"
+
+# Il faut exactement 2 arguments
+if [ $# -ne 2 ] ; then
+    # Erreur sur stderr
+    echo "error: usage: factdiv n m" 1>&2
+    # Statut 1
+    exit 1
+fi
+
+# On NE nomme PAS nos variables n et m : t les écrase (variables globales
+# de util.sh). On utilise donc a et b.
+a="$1"
+b="$2"
+
+# Vérifie que les deux arguments sont des entiers
+for v in "$a" "$b" ; do
+    # t échoue => ce n'est pas un entier
+    if ! t "$v" ; then
+        # Erreur sur stderr
+        echo "error: '$v' is not an integer" 1>&2
+        # Statut 2
+        exit 2
+    fi
+done
+
+# Il faut a >= b >= 0, sinon la division entière n'a pas de sens ici
+if [ "$b" -lt 0 ] || [ "$a" -lt "$b" ] ; then
+    # Erreur sur stderr
+    echo "error: need n >= m >= 0" 1>&2
+    # Statut 3
+    exit 3
+fi
+
+# n!/m! : chaque factorielle est calculée par f dans $( ), puis on divise.
+# Limite : les entiers du shell sont sur 64 bits, donc n <= 20.
+echo $(( $(f "$a") / $(f "$b") ))

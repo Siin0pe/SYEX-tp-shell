@@ -1,0 +1,75 @@
+#!/bin/sh
+# usage    : pidfiles [-s] dir
+# fonction : liste les utilisateurs qui ont des fichiers réguliers dans
+#            l'arborescence de dir, avec leur nombre de fichiers.
+#            Avec -s, ajoute la taille cumulée de ces fichiers (en octets).
+
+# --- analyse des arguments ---
+# size = 1 si l'option -s est donnée
+size=0
+# Si le premier argument est -s...
+if [ "$1" = "-s" ] ; then
+    # ...on retient l'option
+    size=1
+    # ...et on la retire de la liste : $2 devient $1
+    shift
+fi
+
+# Il doit rester exactement un argument : le répertoire
+if [ $# -ne 1 ] ; then
+    # Erreur sur stderr
+    echo "error: usage: pidfiles [-s] dir" 1>&2
+    # Statut 1
+    exit 1
+fi
+
+# Nom significatif pour l'argument
+dir="$1"
+
+# Le répertoire doit exister
+if [ ! -d "$dir" ] ; then
+    # Erreur sur stderr
+    echo "error: '$dir' does not exist or is not a directory" 1>&2
+    # Statut 2
+    exit 2
+fi
+
+# Fichier temporaire unique grâce au PID du shell ($$)
+tmp=/tmp/pidfiles.$$
+
+# a. Pour chaque fichier régulier, écrit une ligne "propriétaire taille"
+#    (stat -c '%U %s'). Les erreurs de find (droits) vont à la poubelle.
+find "$dir" -type f -exec stat -c '%U %s' {} \; > "$tmp" 2> /dev/null
+
+# b. Liste des utilisateurs sans doublon : 1re colonne (séparateur ' '),
+#    puis tri avec suppression des doublons (sort -u).
+#    Pas de guillemets autour de $( ) : on veut un mot par utilisateur
+#    (les noms d'utilisateur ne contiennent pas d'espace).
+for u in $(cut -d ' ' -f 1 "$tmp" | sort -u) ; do
+    # c. Compte les fichiers de u et additionne leurs tailles
+    nb=0
+    tot=0
+    # Lit le fichier temporaire ligne par ligne : "user taille".
+    # "done < fichier" plutôt que "cat fichier | while" : pas de
+    # sous-processus, nb et tot gardent leur valeur après done (diapo 96).
+    while read user sz ; do
+        # Ligne qui concerne l'utilisateur u
+        if [ "$user" = "$u" ] ; then
+            # Un fichier de plus
+            nb=$((nb+1))
+            # Ajoute sa taille au total
+            tot=$((tot+sz))
+        fi
+    done < "$tmp"
+    # Affiche le résultat selon l'option
+    if [ $size -eq 1 ] ; then
+        # Avec -s : utilisateur, nombre, taille cumulée
+        echo "$u $nb $tot"
+    else
+        # Sans -s : utilisateur et nombre
+        echo "$u $nb"
+    fi
+done
+
+# Supprime le fichier temporaire
+rm -f "$tmp"

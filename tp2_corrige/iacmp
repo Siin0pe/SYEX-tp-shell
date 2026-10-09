@@ -1,0 +1,15 @@
+#!/bin/sh
+# usage    : iacmp str1 str2 ...
+# fonction : wrapper de /pub/FISE_OSSE11/shell/iacmp/iacmp. Il configure
+#            l'environnement puis se remplace (exec) par le vrai programme.
+
+# Répertoire d'installation de iacmp, marqué pour être transmis (export)
+export IacmpDir=/pub/FISE_OSSE11/shell/iacmp
+# Répertoire des bibliothèques dont iacmp a besoin, marqué aussi
+export LD_LIBRARY_PATH=/pub/FISE_OSSE11/shell/iacmp/lib
+
+# exec : remplace l'unité d'exécution du shell par celle de iacmp
+#        (pas de nouveau processus, cours diapo 74).
+# "$@" : transmet tous les arguments en gardant chacun intact
+#        ('chat roux' reste UN argument, cours diapo 94).
+exec /pub/FISE_OSSE11/shell/iacmp/iacmp "$@"

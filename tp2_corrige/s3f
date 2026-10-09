@@ -1,0 +1,43 @@
+#!/bin/sh
+# usage    : s3f file1 file2 file3
+# fonction : réécrit les 3 chemins de fichiers réguliers triés par
+#            ordre croissant de taille.
+
+# Source la bibliothèque rangée à côté du script
+. "$(dirname "$0")/s3tool.sh"
+
+# Il faut exactement 3 arguments
+if [ $# -ne 3 ] ; then
+    # Erreur sur stderr
+    echo "error: usage: s3f file1 file2 file3" 1>&2
+    # Statut 1 : mauvais nombre d'arguments
+    exit 1
+fi
+
+# Vérifie chaque argument
+for f in "$@" ; do
+    # -e : le fichier existe (et n'est pas un lien mort)
+    if [ ! -e "$f" ] ; then
+        # Erreur : le fichier n'existe pas
+        echo "error: '$f' does not exist" 1>&2
+        # Statut 2
+        exit 2
+    fi
+    # -f : le fichier est régulier (pas un répertoire, ni un fichier spécial)
+    if [ ! -f "$f" ] ; then
+        # Erreur : pas un fichier régulier
+        echo "error: '$f' is not a regular file" 1>&2
+        # Statut 3
+        exit 3
+    fi
+done
+
+# Taille de chaque fichier en octets (stat -c '%s', vu au TP1 exo 9).
+# Guillemets autour de $( ) et des variables : les chemins peuvent
+# contenir des espaces (cours diapo 93).
+s1="$(stat -c '%s' "$1")"
+s2="$(stat -c '%s' "$2")"
+s3="$(stat -c '%s' "$3")"
+
+# Tri numérique : clés = tailles, valeurs affichées = chemins
+s36int "$s1" "$1" "$s2" "$2" "$s3" "$3"

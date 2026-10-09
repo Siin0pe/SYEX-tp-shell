@@ -1,0 +1,28 @@
+#!/bin/sh
+# usage    : sortarg2 s1 s2 ... sn
+# fonction : comme sortarg1 mais sans fichier intermédiaire, avec des pipes.
+
+# La boucle for écrit un argument par ligne sur stdout...
+for s in "$@" ; do
+    # Un argument par ligne
+    echo "$s"
+# ... qui est envoyé dans sort, dont la sortie va dans le groupe { }
+done | sort | {
+    # Le groupe { } entier lit la sortie de sort sur son stdin.
+    # Il tourne dans un sous-processus à cause du |, mais comme first
+    # n'est utilisée que dans le groupe, ça ne pose pas de problème.
+    first=1
+    # Lit les lignes triées une par une
+    while read ligne ; do
+        # Espace avant chaque élément sauf le premier
+        if [ $first -eq 0 ] ; then
+            echo -n " "
+        fi
+        # Écrit l'élément sans saut de ligne
+        echo -n "$ligne"
+        # Au moins un élément écrit
+        first=0
+    done
+    # Saut de ligne final
+    echo
+}

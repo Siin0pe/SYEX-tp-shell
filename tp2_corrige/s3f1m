@@ -1,0 +1,45 @@
+#!/bin/sh
+# usage    : s3f1m file1 file2 file3
+# fonction : réécrit les 3 fichiers triés par ordre croissant du 2nd mot
+#            de leur première ligne (on suppose que ce mot existe).
+
+# Source la bibliothèque rangée à côté du script
+. "$(dirname "$0")/s3tool.sh"
+
+# Il faut exactement 3 arguments
+if [ $# -ne 3 ] ; then
+    # Erreur sur stderr
+    echo "error: usage: s3f1m file1 file2 file3" 1>&2
+    # Statut 1
+    exit 1
+fi
+
+# Vérifie chaque argument
+for f in "$@" ; do
+    # Le fichier doit exister
+    if [ ! -e "$f" ] ; then
+        # Erreur : inexistant
+        echo "error: '$f' does not exist" 1>&2
+        # Statut 2
+        exit 2
+    fi
+    # -r : le fichier peut être lu
+    if [ ! -r "$f" ] ; then
+        # Erreur : illisible
+        echo "error: '$f' is not readable" 1>&2
+        # Statut 3
+        exit 3
+    fi
+done
+
+# read lit UNE ligne de stdin (ici le fichier, redirigé avec <).
+# 1er mot dans w1, 2e mot dans w2, le reste de la ligne dans r
+# (cours diapo 74). La clé qui nous intéresse est donc w2.
+# On utilise "read ... < fichier" et pas "cat fichier | read" : avec le
+# pipe, read tourne dans un sous-processus et w2 serait perdue (diapo 96).
+read w1 k1 r < "$1"
+read w1 k2 r < "$2"
+read w1 k3 r < "$3"
+
+# Tri lexicographique : clés = 2nds mots, valeurs = noms de fichiers
+s36str "$k1" "$1" "$k2" "$2" "$k3" "$3"

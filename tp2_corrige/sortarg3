@@ -1,0 +1,54 @@
+#!/bin/sh
+# usage    : sortarg3 s1 s2 ... sn      (les si ne contiennent PAS d'espace)
+# fonction : tri par sélection : on écrit le minimum, on l'enlève de la
+#            liste des arguments avec set --, et on recommence.
+
+# first vaut 1 tant que rien n'a été écrit (gestion des espaces)
+first=1
+
+# Tant qu'il reste des arguments à traiter
+while [ $# -gt 0 ] ; do
+    # 1. Cherche le plus petit argument. Point de départ : le premier.
+    min="$1"
+    # Parcourt tous les arguments
+    for s in "$@" ; do
+        # Si s est avant min (ordre lexicographique, \< = test sur chaînes)
+        if [ "$s" \< "$min" ] ; then
+            # s devient le nouveau minimum
+            min="$s"
+        fi
+    done
+
+    # 2. Construit args = tous les arguments sauf UNE occurrence de min
+    args=
+    # removed passe à 1 quand on a sauté le min (s'il y a des doublons,
+    # on n'en enlève qu'un seul)
+    removed=0
+    # Reparcourt les arguments
+    for s in "$@" ; do
+        # Première occurrence du min : on la saute
+        if [ $removed -eq 0 ] && [ "$s" = "$min" ] ; then
+            removed=1
+        # Les autres sont ajoutées à args, séparées par un espace
+        else
+            args="$args $s"
+        fi
+    done
+
+    # 3. Écrit min, précédé d'un espace sauf la première fois
+    if [ $first -eq 0 ] ; then
+        echo -n " "
+    fi
+    # Écrit le minimum sans saut de ligne
+    echo -n "$min"
+    # Au moins un élément écrit
+    first=0
+
+    # 4. Remplace $1 $2 ... par le contenu de args.
+    #    $args SANS guillemets : le shell découpe la chaîne sur les espaces
+    #    pour obtenir plusieurs arguments. C'est pour ça que les si ne
+    #    doivent pas contenir d'espace ('chat roux' donnerait 2 arguments).
+    set -- $args
+done
+# Saut de ligne final
+echo

@@ -1,0 +1,156 @@
+#!/bin/sh
+# usage    : shzip [-z] archive.shz dir-src
+# fonction : crée archive.shz, un script shell qui recrée l'arborescence
+#            de dir-src. Pour restaurer :
+#                mkdir dir-dest ; ./archive.shz dir-dest
+#            -z : compresse chaque fichier avec gzip avant de l'encoder.
+#
+# Principe : le contenu de chaque fichier est encodé en base64 (texte
+# seulement) et mis dans un "here document" (<< 'EOF', cours diapo 52).
+# Exemple de code généré pour un fichier file1 :
+#     base64 -d > "$1/file1" << 'EOF'
+#     YWFhCg==
+#     EOF
+#     chmod 644 "$1/file1"
+# Dans l'archive, $1 sera le répertoire destination passé à archive.shz.
+
+# --- analyse des arguments ---
+# zip = 1 si l'option -z est donnée
+zip=0
+# Option -z en premier argument ?
+if [ "$1" = "-z" ] ; then
+    # On retient l'option...
+    zip=1
+    # ...et on la retire des arguments
+    shift
+fi
+
+# Il faut exactement 2 arguments : l'archive et le répertoire source
+if [ $# -ne 2 ] ; then
+    # Erreur sur stderr
+    echo "error: usage: shzip [-z] archive.shz dir-src" 1>&2
+    # Statut 1
+    exit 1
+fi
+
+# Noms significatifs
+archive="$1"
+src="$2"
+
+# La source doit être un répertoire
+if [ ! -d "$src" ] ; then
+    # Erreur sur stderr
+    echo "error: '$src' does not exist or is not a directory" 1>&2
+    # Statut 2
+    exit 2
+fi
+
+# L'archive ne doit pas être un répertoire existant
+if [ -d "$archive" ] ; then
+    # Erreur sur stderr
+    echo "error: '$archive' is a directory" 1>&2
+    # Statut 3
+    exit 3
+fi
+
+
+# encodefile path rel
+# Écrit sur stdout le code qui recrée le fichier path sous le nom
+# $1/rel dans le répertoire destination de l'archive.
+encodefile() {
+    # Variables locales : encodedir est récursive et appelle encodefile
+    local path="$1"
+    local rel="$2"
+    if [ $zip -eq 1 ] ; then
+        # Avec -z : à la restauration, décode puis décompresse (gunzip).
+        # \$1 : le \ empêche l'expansion maintenant ; l'archive contiendra
+        # bien "$1". 'EOF' entre quotes : le here document n'est pas
+        # expansé lors de la restauration.
+        echo "base64 -d << 'EOF' | gunzip > \"\$1/$rel\""
+        # Compresse sur stdout (-c), puis encode en base64
+        gzip -c "$path" | base64
+    else
+        # Sans -z : décode directement vers le fichier destination
+        echo "base64 -d > \"\$1/$rel\" << 'EOF'"
+        # Encode le fichier en base64
+        base64 "$path"
+    fi
+    # Fin du here document. Une ligne base64 fait un multiple de 4
+    # caractères : elle ne peut donc jamais valoir "EOF" (3 caractères).
+    echo "EOF"
+    # Remet les droits d'origine (stat -c '%a' = droits en octal)
+    echo "chmod $(stat -c '%a' "$path") \"\$1/$rel\""
+}
+
+
+# encodedir dir rel
+# Écrit sur stdout le code qui recrée le contenu de dir dans $1/rel
+# (rel vide = racine de la destination). Récursive pour les sous-répertoires.
+encodedir() {
+    # Variables locales : indispensable car la fonction est récursive
+    local dir="$1"
+    local rel="$2"
+    local f name r
+    # "$dir"/* ne donne pas les fichiers cachés (diapo 46) : on ajoute .*
+    for f in "$dir"/* "$dir"/.* ; do
+        # Nom de base du fichier
+        name="$(basename "$f")"
+        # Cas particuliers : . (lui-même) et .. (le parent), sinon
+        # récursion infinie
+        case "$name" in
+            .|..) continue ;;
+        esac
+        # Motif sans correspondance : il reste tel quel ("dir/*"), on
+        # l'ignore (-h pour garder les liens morts, signalés plus bas)
+        if [ ! -e "$f" ] && [ ! -h "$f" ] ; then
+            # Rien à archiver
+            continue
+        fi
+        # Chemin relatif dans la destination
+        if [ -z "$rel" ] ; then
+            # À la racine : juste le nom
+            r="$name"
+        else
+            # Dans un sous-répertoire : rel/nom
+            r="$rel/$name"
+        fi
+        # Les liens symboliques sont ignorés (testé AVANT -f et -d, qui
+        # suivent les liens)
+        if [ -h "$f" ] ; then
+            # Avertissement sur stderr (n'entre pas dans l'archive)
+            echo "warning: '$f' is a link, ignored" 1>&2
+        # Fichier régulier : on l'encode
+        elif [ -f "$f" ] ; then
+            encodefile "$f" "$r"
+        # Répertoire : on le crée puis on archive son contenu
+        elif [ -d "$f" ] ; then
+            # Code de création du répertoire dans l'archive
+            echo "mkdir -p \"\$1/$r\""
+            # Appel récursif sur le sous-répertoire
+            encodedir "$f" "$r"
+        # Autre type (fichier spécial, FIFO...) : ignoré
+        else
+            # Avertissement sur stderr
+            echo "warning: '$f' is not a regular file nor a directory, ignored" 1>&2
+        fi
+    done
+}
+
+
+# --- génération de l'archive ---
+# Tout ce que le groupe { } écrit sur stdout va dans l'archive ;
+# les avertissements (stderr) restent sur le terminal.
+{
+    # Entête : l'archive est un script sh
+    echo '#!/bin/sh'
+    # Commentaire dans l'archive
+    echo '# archive auto-décompressable générée par shzip'
+    # Code de vérification de l'argument de l'archive : quotes simples, rien
+    # n'est expansé maintenant, la ligne est recopiée telle quelle
+    echo 'if [ $# -ne 1 ] || [ ! -d "$1" ] ; then echo "usage: $0 dir-dest" 1>&2 ; exit 1 ; fi'
+    # Code qui recrée tout le contenu du répertoire source
+    encodedir "$src" ""
+} > "$archive"
+
+# Rend l'archive exécutable par son propriétaire
+chmod u+x "$archive"

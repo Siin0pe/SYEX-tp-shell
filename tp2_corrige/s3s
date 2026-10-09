@@ -1,0 +1,19 @@
+#!/bin/sh
+# usage    : s3s str1 str2 str3
+# fonction : réécrit les 3 chaînes triées par ordre croissant.
+
+# Source la bibliothèque, qui est rangée à côté du script ($0).
+# "." et pas "source" : sh n'accepte que "."
+. "$(dirname "$0")/s3tool.sh"
+
+# Il faut exactement 3 arguments
+if [ $# -ne 3 ] ; then
+    # Message d'erreur sur stderr
+    echo "error: usage: s3s str1 str2 str3" 1>&2
+    # Statut d'erreur 1
+    exit 1
+fi
+
+# Tri lexicographique (forme courte à 3 arguments, entre guillemets
+# pour garder 'chat roux' en un seul argument)
+s36str "$1" "$2" "$3"

@@ -1,0 +1,28 @@
+#!/bin/sh
+# usage    : s3e int1 int2 int3
+# fonction : réécrit les 3 entiers triés par ordre croissant.
+
+# Source la bibliothèque rangée à côté du script
+. "$(dirname "$0")/s3tool.sh"
+
+# Il faut exactement 3 arguments
+if [ $# -ne 3 ] ; then
+    # Erreur sur stderr
+    echo "error: usage: s3e int1 int2 int3" 1>&2
+    # Statut 1 : mauvais nombre d'arguments
+    exit 1
+fi
+
+# Vérifie que chaque argument est un entier ("$@" : un élément par argument)
+for a in "$@" ; do
+    # ! inverse le statut : on entre dans le if si isInt échoue
+    if ! isInt "$a" ; then
+        # Erreur sur stderr en citant l'argument fautif
+        echo "error: '$a' is not an integer" 1>&2
+        # Statut 2 : argument invalide
+        exit 2
+    fi
+done
+
+# Tri numérique (forme courte à 3 arguments)
+s36int "$1" "$2" "$3"

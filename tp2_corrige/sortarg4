@@ -1,0 +1,50 @@
+#!/bin/sh
+# usage    : sortarg4 s1 s2 ... sn      (les si ne contiennent PAS d'espace)
+# fonction : variante récursive de sortarg3. Au lieu de set -- et de la
+#            boucle externe, le script s'appelle lui-même sur le reste.
+
+# Plus d'argument : il ne reste qu'à terminer la ligne
+if [ $# -eq 0 ] ; then
+    # Saut de ligne final
+    echo
+    # Fin de la récursion
+    exit 0
+fi
+
+# 1. Cherche le plus petit argument (départ : le premier)
+min="$1"
+# Parcourt tous les arguments
+for s in "$@" ; do
+    # Comparaison lexicographique de chaînes
+    if [ "$s" \< "$min" ] ; then
+        # Nouveau minimum
+        min="$s"
+    fi
+done
+
+# 2. args = tous les arguments sauf une occurrence de min
+args=
+# 0 tant que le min n'a pas été sauté
+removed=0
+# Reparcourt les arguments
+for s in "$@" ; do
+    # Saute la première occurrence du min
+    if [ $removed -eq 0 ] && [ "$s" = "$min" ] ; then
+        removed=1
+    # Ajoute les autres à args
+    else
+        args="$args $s"
+    fi
+done
+
+# 3. Écrit le minimum sans saut de ligne
+echo -n "$min"
+# S'il reste des éléments, écrit l'espace qui les séparera du suivant
+if [ -n "$args" ] ; then
+    echo -n " "
+fi
+
+# 4. Appel récursif sur les arguments restants. exec remplace le
+#    processus courant, on n'empile donc pas les processus.
+#    $args sans guillemets : découpage sur les espaces (voir sortarg3).
+exec sh "$0" $args

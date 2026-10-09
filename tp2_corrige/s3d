@@ -1,0 +1,38 @@
+#!/bin/sh
+# usage    : s3d dir1 dir2 dir3
+# fonction : réécrit les 3 répertoires triés par ordre croissant du nombre
+#            de fichiers contenus dans toute leur arborescence.
+
+# Source la bibliothèque rangée à côté du script
+. "$(dirname "$0")/s3tool.sh"
+
+# Il faut exactement 3 arguments
+if [ $# -ne 3 ] ; then
+    # Erreur sur stderr
+    echo "error: usage: s3d dir1 dir2 dir3" 1>&2
+    # Statut 1
+    exit 1
+fi
+
+# Vérifie que chaque argument est un répertoire
+for d in "$@" ; do
+    # -d : existe ET est un répertoire
+    if [ ! -d "$d" ] ; then
+        # Erreur sur stderr
+        echo "error: '$d' does not exist or is not a directory" 1>&2
+        # Statut 2
+        exit 2
+    fi
+done
+
+# Nombre de fichiers de chaque arborescence :
+# find écrit un chemin par ligne (tous les types de fichiers), wc -l compte
+# les lignes. 2> /dev/null cache les erreurs (répertoires illisibles).
+# find compte aussi le répertoire de départ : +1 pour tous, l'ordre ne
+# change pas.
+n1="$(find "$1" 2> /dev/null | wc -l)"
+n2="$(find "$2" 2> /dev/null | wc -l)"
+n3="$(find "$3" 2> /dev/null | wc -l)"
+
+# Tri numérique : clés = nombres de fichiers, valeurs = répertoires
+s36int "$n1" "$1" "$n2" "$2" "$n3" "$3"

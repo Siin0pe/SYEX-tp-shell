@@ -1,0 +1,20 @@
+#!/bin/sh
+# usage    : sleepsort n1 n2 ... nk        (entiers positifs)
+# fonction : écrit les ni dans l'ordre croissant. Chaque ni "dort" ni
+#            secondes avant de s'écrire, donc les petits sortent en premier.
+
+# Pour chaque nombre
+for n in "$@" ; do
+    # Lance EN ARRIÈRE-PLAN (&) le groupe { sleep ; echo }.
+    # Les { } font que le & porte sur le groupe entier : sleep et echo
+    # tournent ensemble, en parallèle avec les autres groupes.
+    { sleep "$n" ; echo "$n" ; } &
+done
+
+# Attend la fin des processus lancés en arrière-plan, une fois par nombre.
+# Sans wait, le script se terminerait tout de suite et les nombres
+# s'afficheraient après le retour du prompt.
+for n in "$@" ; do
+    # wait : attend la fin des fils en arrière-plan
+    wait
+done

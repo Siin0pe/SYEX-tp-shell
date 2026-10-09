@@ -1,0 +1,32 @@
+#!/bin/sh
+# usage    : sortarg1 s1 s2 ... sn
+# fonction : écrit les si triés par ordre croissant sur une seule ligne,
+#            en passant par les fichiers intermédiaires /tmp/1 et /tmp/2.
+
+# a. Écrit chaque argument sur sa propre ligne dans /tmp/1.
+#    "$@" garde 'chat roux' en un seul élément ; la redirection après
+#    done s'applique à toute la boucle (le fichier est écrasé une fois).
+for s in "$@" ; do
+    # Un argument par ligne
+    echo "$s"
+done > /tmp/1
+
+# b. Trie /tmp/1 et met le résultat dans /tmp/2
+sort /tmp/1 > /tmp/2
+
+# c. Relit /tmp/2 ligne par ligne et écrit tout sur une seule ligne
+#    first vaut 1 tant qu'on n'a encore rien écrit
+first=1
+# read lit une ligne de stdin ; stdin de la boucle = /tmp/2 (done < /tmp/2)
+while read ligne ; do
+    # Écrit un espace avant chaque élément sauf le premier
+    if [ $first -eq 0 ] ; then
+        echo -n " "
+    fi
+    # Écrit l'élément sans saut de ligne
+    echo -n "$ligne"
+    # On a écrit au moins un élément
+    first=0
+done < /tmp/2
+# Saut de ligne final
+echo
