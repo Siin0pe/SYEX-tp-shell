@@ -7,7 +7,7 @@ Ils ont été testés avec `sh` sur les fichiers de `/pub/FISE_OSSE11/shell`.
 
 ```sh
 mkdir -pv ~/OSSE11/bin                      # crée le répertoire (et ses parents avec -p)
-cp -v tp2_corrige/* ~/OSSE11/bin/           # copie les scripts
+cp -v tp2/* ~/OSSE11/bin/           # copie les scripts
 chmod -v u+x ~/OSSE11/bin/*                 # droits d'exécution pour le propriétaire
 export PATH="$HOME/OSSE11/bin:$PATH"        # PAS d'espace autour du =, $HOME plutôt que ~
 ```
